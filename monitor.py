@@ -107,57 +107,40 @@ def send_telegram(msg):
 
 def query_oklink(chain, address):
 
-    url = (
-        "https://www.oklink.com/api/explorer/v1/"
-        f"{chain}/address/{address}"
-    )
+    url = f"https://www.oklink.com/{chain}/address/{address}"
 
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 Chrome/122 Safari/537.36"
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0 Safari/537.36"
         ),
-        "Accept": "application/json, text/plain, */*",
-        "Referer": f"https://www.oklink.com/{chain}/address/{address}",
-        "Origin": "https://www.oklink.com",
+        "Accept-Language": "en-US,en;q=0.9",
     }
 
-    for retry in range(3):
+    try:
 
-        try:
+        r = requests.get(
+            url,
+            headers=headers,
+            timeout=20
+        )
 
-            r = requests.get(
-                url,
-                headers=headers,
-                timeout=20
-            )
+        print(
+            f"{address[:8]} HTTP:",
+            r.status_code
+        )
 
-            print(
-                f"{address[:8]} HTTP:",
-                r.status_code
-            )
+        if r.status_code != 200:
+            return None
 
-            if r.status_code == 403:
-                print("被 Cloudflare 拦截")
-                return None
+        return r.text.lower()
 
-            if r.status_code != 200:
-                time.sleep(3)
-                continue
+    except Exception as e:
 
-            try:
-                return r.json()
-            except:
-                print("JSON解析失败")
-                return None
+        print("请求失败:", e)
 
-        except Exception as e:
-
-            print("请求异常:", e)
-
-            time.sleep(5)
-
-    return None
+        return None
 
 # =========================
 # 检查标签
@@ -170,22 +153,24 @@ def check_address(chain, address):
     if not data:
         return
 
-    text = json.dumps(data)
+    text = data
 
     # 直接全文搜索
-    keywords = [
-        "诈骗",
-        "博彩",
-        "赌博",
-        "scam",
-        "fraud",
-        "mixer",
-        "sanction",
-        "黑钱",
-        "洗钱",
-        "risk",
-        "危险"
-    ]
+  keywords = [
+    "scam",
+    "fraud",
+    "gambling",
+    "博彩",
+    "赌博",
+    "mixer",
+    "黑钱",
+    "洗钱",
+    "high risk",
+    "sanction",
+    "phishing",
+    "诈骗",
+    "黑名单"
+]
 
     matched = []
 
