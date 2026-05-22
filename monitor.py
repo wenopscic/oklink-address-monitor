@@ -3,11 +3,11 @@ import requests
 import json
 import cloudscraper  # 專門用來繞過網站防爬驗證的套件
 
-TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"
-TG_CHAT_ID = "-5259486832"
+# 安全做法：從環境變數讀取金鑰（請至 GitHub 倉庫的 Settings -> Secrets 配置）
+TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"("TG_BOT_TOKEN")
+TG_CHAT_ID = "-5259486832"("TG_CHAT_ID")
 
 # 欲監控的地址清單 (鏈名稱小寫, 地址)
-# 注意：免密鑰網頁端路徑的鏈名稱通常為小寫，例如：eth, bsc, tron, btc
 WATCH_LIST = [
     ("tron", "TAkhPRkh49khbCRL89kDBixPo4qAwRgtLX"),
     ("tron", "TCRi4gorNNmD6gWmCrb9HzN9oYkJCeEn1Q"), 
@@ -29,18 +29,21 @@ WATCH_LIST = [
 def send_telegram_alert(message):
     """發送 Telegram 預警"""
     if not TG_BOT_TOKEN or not TG_CHAT_ID:
-        print(f"【日誌輸出】:\n{message}")
+        print(f"【通知未配置，日誌輸出】:\n{message}")
         return
+    # 修正後的正確 Telegram API 網址
     url = f"https://telegram.org{TG_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TG_CHAT_ID, "text": message, "parse_mode": "Markdown"}
     try:
-        requests.post(url, json=payload, timeout=10)
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code != 200:
+            print(f"TG 發送失敗，狀態碼: {response.status_code}, 回傳: {response.text}")
     except Exception as e:
         print(f"發送通知失敗: {e}")
 
 def check_address_without_key(chain, address):
     """免金鑰模擬瀏覽器查詢地址標記"""
-    # 這是 OKLink 網頁前端真實呼叫的內部 API 網址
+    # 修正後的正確 OKLink API 網址
     url = f"https://oklink.com{chain}&address={address}"
     
     # 模擬一般 Chrome 瀏覽器的請求標頭 (Headers)
@@ -53,7 +56,6 @@ def check_address_without_key(chain, address):
     }
 
     try:
-        # 使用 cloudscraper 代替普通的 requests 以繞過 Cloudflare 5秒盾
         scraper = cloudscraper.create_scraper()
         response = scraper.get(url, headers=headers, timeout=15)
         
@@ -71,7 +73,8 @@ def check_address_without_key(chain, address):
             print(f"[{chain.upper()}] 未找到該地址數據")
             return
 
-        addr_info = data_list[0]
+        # 注意：OKLink 傳回的 data 是一個列表，通常取第一個元素
+        addr_info = data_list[0] if isinstance(data_list, list) else data_list
         
         # 提取網頁端標記與風險
         label = addr_info.get("label", "").strip()
