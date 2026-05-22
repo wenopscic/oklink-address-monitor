@@ -1,98 +1,249 @@
 import os
-import requests
 import json
-import cloudscraper  # 專門用來繞過網站防爬驗證的套件
+import time
+import random
+import requests
+from pathlib import Path
 
-# 安全做法：從環境變數讀取金鑰（請至 GitHub 倉庫的 Settings -> Secrets 配置）
+# =========================
+# Telegram
+# =========================
+
 TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"("TG_BOT_TOKEN")
 TG_CHAT_ID = "-5259486832"("TG_CHAT_ID")
 
+# =========================
+# 地址列表
+# =========================
+
+TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"("TG_BOT_TOKEN")
+
+TG_CHAT_ID = "-5259486832"("TG_CHAT_ID")
+
+
+
+
 # 欲監控的地址清單 (鏈名稱小寫, 地址)
+
 WATCH_LIST = [
+
     ("tron", "TAkhPRkh49khbCRL89kDBixPo4qAwRgtLX"),
+
     ("tron", "TCRi4gorNNmD6gWmCrb9HzN9oYkJCeEn1Q"), 
+
     ("tron", "TNcZ2kS9553ereKLy5vNST5XDqakePhCAj"),
+
     ("tron", "TS7iwGakskLraZtc3iP45hXEpZGXykkLT6"), 
+
     ("tron", "TKmbY1FagdGw1oVk5fUS7AKN7aFnGG8q3H"),
+
     ("tron", "TYisoMcHMihcKmDqMTheBjgNoS7paTXKkg"), 
+
     ("tron", "TGNJ57Gd9zYuGuTLgeHQhyKRaXnDMJGmSS"),
+
     ("tron", "TEdqQfgR2W3pwmYPm4iUh2dPXBiJDPDceM"), 
+
     ("tron", "TU9yfMW7C9ybC87EgzjUj5T2f9desjZcm2"),
+
     ("tron", "TECk8FJFmRsHSiWGmGz99jShMuvB8TsRDR"), 
+
     ("tron", "TV2isXwYgr2jgtkRP4A8jtb7jw6UTkEhNQ"),
+
     ("tron", "TPR7b2B5SumonCzXrLN5B8FSUWw8u9BEgu"), 
+
     ("tron", "TEMXLzfuGEHiEPJimz1shtsR6tNUjyVtfQ"),
+
     ("tron", "TMfWQsjy9GNcaF4ViGLVB7NWKM6TUCXJ48"), 
+
     ("tron", "TAsbxyoopLYo4XAarpoDG7WuHucppvcMd7"),
+
 ]
 
-def send_telegram_alert(message):
-    """發送 Telegram 預警"""
-    if not TG_BOT_TOKEN or not TG_CHAT_ID:
-        print(f"【通知未配置，日誌輸出】:\n{message}")
-        return
-    # 修正後的正確 Telegram API 網址
-    url = f"https://telegram.org{TG_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TG_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code != 200:
-            print(f"TG 發送失敗，狀態碼: {response.status_code}, 回傳: {response.text}")
-    except Exception as e:
-        print(f"發送通知失敗: {e}")
+# =========================
+# 状态保存
+# =========================
 
-def check_address_without_key(chain, address):
-    """免金鑰模擬瀏覽器查詢地址標記"""
-    # 修正後的正確 OKLink API 網址
-    url = f"https://oklink.com{chain}&address={address}"
-    
-    # 模擬一般 Chrome 瀏覽器的請求標頭 (Headers)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Origin": "https://www.oklink.com",
-        "Referer": f"https://oklink.com{chain}/address/{address}"
+STATE_FILE = "state.json"
+
+if Path(STATE_FILE).exists():
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        STATE = json.load(f)
+else:
+    STATE = {}
+
+# =========================
+# Telegram 推送
+# =========================
+
+def send_telegram(msg):
+
+    if not TG_BOT_TOKEN or not TG_CHAT_ID:
+        print("未配置 Telegram")
+        return
+
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": TG_CHAT_ID,
+        "text": msg,
+        "parse_mode": "Markdown"
     }
 
     try:
-        scraper = cloudscraper.create_scraper()
-        response = scraper.get(url, headers=headers, timeout=15)
-        
-        if response.status_code != 200:
-            print(f"[{chain.upper()}] 請求失敗，狀態碼: {response.status_code} (可能觸發防爬)")
-            return
-            
-        res_data = response.json()
-        if res_data.get("code") != "0":
-            print(f"[{chain.upper()}] 數據預載失敗: {res_data.get('msg')}")
-            return
 
-        data_list = res_data.get("data", [])
-        if not data_list:
-            print(f"[{chain.upper()}] 未找到該地址數據")
-            return
+        r = requests.post(
+            url,
+            json=payload,
+            timeout=15
+        )
 
-        # 注意：OKLink 傳回的 data 是一個列表，通常取第一個元素
-        addr_info = data_list[0] if isinstance(data_list, list) else data_list
-        
-        # 提取網頁端標記與風險
-        label = addr_info.get("label", "").strip()
-        is_risk = addr_info.get("isRisk", False)
-
-        if label:
-            msg = f"⚠️ **【OKLink 免密鑰監控預警】**\n\n" \
-                  f"🔗 **公鏈**: {chain.upper()}\n" \
-                  f"🧱 **地址**: `{address}`\n" \
-                  f"🏷️ **網頁標記**: *{label}*\n" \
-                  f"🚨 **風險狀態**: {'危險' if is_risk else '普通標記'}"
-            send_telegram_alert(msg)
-        else:
-            print(f"[{chain.upper()}] 地址 {address[:8]}... 暫無網頁標記。")
+        print("TG:", r.status_code)
 
     except Exception as e:
-        print(f"解析出錯 ({chain} - {address}): {e}")
+        print("TG失败:", e)
+
+# =========================
+# OKLink 网页接口
+# =========================
+
+def query_oklink(chain, address):
+
+    url = (
+        "https://www.oklink.com/api/explorer/v1/"
+        f"{chain}/address/{address}"
+    )
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 Chrome/122 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+        "Referer": f"https://www.oklink.com/{chain}/address/{address}",
+        "Origin": "https://www.oklink.com",
+    }
+
+    for retry in range(3):
+
+        try:
+
+            r = requests.get(
+                url,
+                headers=headers,
+                timeout=20
+            )
+
+            print(
+                f"{address[:8]} HTTP:",
+                r.status_code
+            )
+
+            if r.status_code == 403:
+                print("被 Cloudflare 拦截")
+                return None
+
+            if r.status_code != 200:
+                time.sleep(3)
+                continue
+
+            try:
+                return r.json()
+            except:
+                print("JSON解析失败")
+                return None
+
+        except Exception as e:
+
+            print("请求异常:", e)
+
+            time.sleep(5)
+
+    return None
+
+# =========================
+# 检查标签
+# =========================
+
+def check_address(chain, address):
+
+    data = query_oklink(chain, address)
+
+    if not data:
+        return
+
+    text = json.dumps(data)
+
+    # 直接全文搜索
+    keywords = [
+        "诈骗",
+        "博彩",
+        "赌博",
+        "scam",
+        "fraud",
+        "mixer",
+        "sanction",
+        "黑钱",
+        "洗钱",
+        "risk",
+        "危险"
+    ]
+
+    matched = []
+
+    lower_text = text.lower()
+
+    for k in keywords:
+
+        if k.lower() in lower_text:
+            matched.append(k)
+
+    current = ",".join(sorted(set(matched)))
+
+    old = STATE.get(address)
+
+    print(
+        f"{address[:8]} 当前标签:",
+        current if current else "无"
+    )
+
+    # 初始化
+    if old is None:
+        STATE[address] = current
+        return
+
+    # 出现新标签
+    if old != current:
+
+        msg = (
+            f"⚠️ 地址风险标签变化\n\n"
+            f"链: {chain.upper()}\n"
+            f"地址:\n`{address}`\n\n"
+            f"旧标签:\n{old or '无'}\n\n"
+            f"新标签:\n{current or '无'}"
+        )
+
+        send_telegram(msg)
+
+        STATE[address] = current
+
+# =========================
+# 主程序
+# =========================
 
 if __name__ == "__main__":
+
     for chain, address in WATCH_LIST:
-        check_address_without_key(chain, address)
+
+        check_address(chain, address)
+
+        # 随机延迟
+        time.sleep(random.randint(3, 8))
+
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+
+        json.dump(
+            STATE,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
