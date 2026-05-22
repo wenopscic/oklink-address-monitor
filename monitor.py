@@ -9,8 +9,8 @@ from pathlib import Path
 # Telegram
 # =========================
 
-TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"("TG_BOT_TOKEN")
-TG_CHAT_ID = "-5259486832"("TG_CHAT_ID")
+TG_BOT_TOKEN = "8694136579:AAFO2KKDbnE0_oQVt_Va5jOgPyXKXF4kHek"
+TG_CHAT_ID = "-5259486832"
 
 # =========================
 # 地址列表
