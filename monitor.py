@@ -1,4 +1,4 @@
-pythonimport os
+import os
 import requests
 import json
 import cloudscraper  # 專門用來繞過網站防爬驗證的套件
