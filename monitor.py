@@ -155,22 +155,21 @@ def check_address(chain, address):
 
     text = data
 
-    # 直接全文搜索
-  keywords = [
-    "scam",
-    "fraud",
-    "gambling",
-    "博彩",
-    "赌博",
-    "mixer",
-    "黑钱",
-    "洗钱",
-    "high risk",
-    "sanction",
-    "phishing",
-    "诈骗",
-    "黑名单"
-]
+    keywords = [
+        "scam",
+        "fraud",
+        "gambling",
+        "博彩",
+        "赌博",
+        "mixer",
+        "黑钱",
+        "洗钱",
+        "high risk",
+        "sanction",
+        "phishing",
+        "诈骗",
+        "黑名单"
+    ]
 
     matched = []
 
@@ -195,7 +194,7 @@ def check_address(chain, address):
         STATE[address] = current
         return
 
-    # 出现新标签
+    # 标签变化
     if old != current:
 
         msg = (
@@ -209,7 +208,6 @@ def check_address(chain, address):
         send_telegram(msg)
 
         STATE[address] = current
-
 # =========================
 # 主程序
 # =========================
