@@ -55,6 +55,7 @@ WATCH_LIST = [
     ("tron", "TMfWQsjy9GNcaF4ViGLVB7NWKM6TUCXJ48"), 
 
     ("tron", "TAsbxyoopLYo4XAarpoDG7WuHucppvcMd7"),
+    ("eth", "0x619A0C4D069B5287FfD7427D468e72c5957e8B4f"),
 
 ]
 
